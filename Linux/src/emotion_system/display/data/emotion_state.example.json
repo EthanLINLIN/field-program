@@ -1,0 +1,17 @@
+{
+  "primaryEmotion": "neutral",
+  "confidence": 0,
+  "emotions": {
+    "happy": 0,
+    "sadness": 0,
+    "surprise": 0,
+    "fear": 0,
+    "anger": 0,
+    "disgust": 0,
+    "neutral": 0
+  },
+  "eegSamples": [],
+  "portraitSrc": "",
+  "snapshotSrc": "",
+  "timestamp": 0
+}

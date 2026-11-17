@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Facial Emotion Entry Flow</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body class="debug-hidden">
+    <main class="viewport">
+        <section id="stageRoot" class="stage" data-state="idle_black_waiting_eeg">
+            <div class="stage-backdrop"></div>
+            <video id="cameraVideo" class="video-frame hidden" autoplay playsinline muted></video>
+            <img id="selectedFrame" class="selected-frame hidden" alt="selected best frame">
+
+            <div id="darkVeil" class="dark-veil"></div>
+            <div id="flashOverlay" class="flash-overlay"></div>
+            <div id="scanOverlay" class="scan-overlay hidden">
+                <div class="scan-line"></div>
+            </div>
+
+            <div id="idleCopy" class="idle-copy">
+                <div id="openingUiVisual" class="opening-ui-visual" aria-hidden="true">
+                    <div class="opening-bg-static">
+                        <img
+                            id="openingUiImage"
+                            class="opening-ui-image"
+                            src="{{ ui_config.openingUiAssetUrl }}"
+                            alt="opening ui reference"
+                            loading="eager"
+                            decoding="async"
+                            fetchpriority="high"
+                        >
+                    </div>
+
+                    <div class="opening-mask-layer">
+                        <div class="opening-mask opening-mask--field" aria-hidden="true"></div>
+                        <div class="opening-mask opening-mask--welcome" aria-hidden="true"></div>
+                        <div class="opening-mask opening-mask--prompt" aria-hidden="true"></div>
+                        <div class="opening-mask opening-mask--sensor" aria-hidden="true"></div>
+                    </div>
+
+                    <div class="opening-local-ui-layer">
+                        <div class="opening-ui-field-module" aria-hidden="true">
+                            <p class="opening-ui-field-label">FIELD</p>
+                            <div class="opening-ui-line opening-ui-line--field">
+                                <span class="opening-ui-dot opening-ui-dot--field"></span>
+                            </div>
+                        </div>
+
+                        <div class="opening-ui-welcome-module" aria-hidden="true">
+                            <p class="opening-ui-welcome-title">欢迎进入情绪映射场域</p>
+                            <div class="opening-ui-line opening-ui-line--welcome">
+                                <span class="opening-ui-dot opening-ui-dot--welcome"></span>
+                            </div>
+                        </div>
+
+                        <p id="openingUiPrompt" class="opening-ui-prompt">请佩戴脑电感知终端，直视镜头；感应后系统将自动开始。</p>
+
+                        <div class="opening-ui-sensor-module" aria-hidden="true">
+                            <div class="opening-ui-line opening-ui-line--sensor">
+                                <span class="opening-ui-dot opening-ui-dot--sensor"></span>
+                            </div>
+                            <div class="opening-ui-sensor-copy">
+                                <div class="opening-ui-sensor-cn-wrap">
+                                    <span class="opening-ui-sensor-side-line"></span>
+                                    <p class="opening-ui-sensor-cn">自动感应中</p>
+                                    <span class="opening-ui-sensor-side-line"></span>
+                                </div>
+                                <p class="opening-ui-sensor-en">WAITING FOR SENSOR</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="activationProgressWrap" class="activation-progress hidden">
+                    <div class="activation-track">
+                        <div id="activationProgressFill" class="activation-fill"></div>
+                    </div>
+                    <p id="activationProgressLabel" class="activation-label">映射激活中 2.0s</p>
+                </div>
+            </div>
+
+            <div id="statusCopy" class="status-copy dev-status">
+                <p id="stateKicker" class="state-kicker">Idle Black</p>
+                <p id="subcopy" class="subcopy">等待小键盘 Numpad1 模拟脑电设备就绪。</p>
+            </div>
+
+            <div id="anchoredCopy" class="anchored-copy">
+                <p class="anchored-headline">面部特征数据已锚定。请循光影指引，步入核心场域。</p>
+            </div>
+
+            <aside id="debugPanel" class="debug-panel dev-debug"></aside>
+        </section>
+    </main>
+
+    <script>
+        window.UI_CONFIG = {{ ui_config | tojson }};
+    </script>
+    <script src="./field_ui_bridge.js"></script>
+    <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

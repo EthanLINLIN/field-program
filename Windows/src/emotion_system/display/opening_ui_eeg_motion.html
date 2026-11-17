@@ -1,0 +1,2455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Opening UI EEG Motion</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #000;
+    }
+
+    body {
+      color: #fff;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: geometricPrecision;
+    }
+
+    .screen {
+      width: 100vw;
+      height: 100vh;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .ui-stage {
+      position: relative;
+      width: min(100vw, 56.25vh);
+      height: min(100vh, 177.7778vw);
+      aspect-ratio: 9 / 16;
+      background: #000;
+      overflow: hidden;
+    }
+
+    .scale-root {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 900px;
+      height: 1600px;
+      transform-origin: center center;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 15% 13%, rgba(255, 255, 255, 0.026), transparent 28%),
+        radial-gradient(circle at 78% 70%, rgba(255, 255, 255, 0.022), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.002) 18%, rgba(255, 255, 255, 0) 52%, rgba(255, 255, 255, 0.012)),
+        #000;
+    }
+
+    .scale-root::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        repeating-linear-gradient(
+          90deg,
+          rgba(255, 255, 255, 0.007) 0,
+          rgba(255, 255, 255, 0.007) 1px,
+          transparent 1px,
+          transparent 10px
+        ),
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.003) 0,
+          rgba(255, 255, 255, 0.003) 1px,
+          transparent 1px,
+          transparent 12px
+        );
+      opacity: 0.26;
+    }
+
+    .scale-root::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(circle at center, transparent 58%, rgba(0, 0, 0, 0.32) 100%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.012), transparent 14%, transparent 88%, rgba(255, 255, 255, 0.012));
+      opacity: 0.85;
+    }
+
+    .panel {
+      position: absolute;
+      border: 1px solid rgba(255, 255, 255, 0.52);
+      border-radius: 28px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.004) 26%, rgba(255, 255, 255, 0.002) 100%),
+        rgba(0, 0, 0, 0.92);
+      box-shadow:
+        inset 0 0 0 1px rgba(255, 255, 255, 0.036),
+        0 0 30px rgba(255, 255, 255, 0.016);
+      overflow: hidden;
+    }
+
+    .panel::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.024), transparent 16%, transparent 84%, rgba(255, 255, 255, 0.012)),
+        radial-gradient(circle at 18% 20%, rgba(255, 255, 255, 0.014), transparent 32%);
+      opacity: 0.84;
+    }
+
+    .top-panel {
+      left: 8px;
+      top: 12px;
+      width: 884px;
+      height: 430px;
+      padding: 34px 38px 30px 38px;
+    }
+
+    .left-panel {
+      left: 8px;
+      top: 458px;
+      width: 390px;
+      height: 765px;
+      padding: 34px 36px 34px 38px;
+    }
+
+    .right-panel {
+      left: 412px;
+      top: 458px;
+      width: 480px;
+      height: 765px;
+      padding: 34px 38px;
+    }
+
+    .bottom-panel {
+      left: 8px;
+      top: 1238px;
+      width: 884px;
+      height: 350px;
+      padding: 32px 38px 28px 38px;
+    }
+
+    .eyebrow,
+    .panel-title,
+    .meta-title,
+    .metric-note,
+    .snapshot-note {
+      text-transform: uppercase;
+      letter-spacing: 0.36em;
+    }
+
+    .eyebrow {
+      font-size: 18px;
+      line-height: 1;
+      color: rgba(255, 255, 255, 0.96);
+      white-space: nowrap;
+    }
+
+    .field-label {
+      position: absolute;
+      left: 38px;
+      top: 38px;
+    }
+
+    .live-pill {
+      position: absolute;
+      right: 26px;
+      top: 28px;
+      min-width: 82px;
+      height: 36px;
+      padding: 0 18px 0 16px;
+      border: 1px solid rgba(255, 255, 255, 0.62);
+      border-radius: 999px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      font-size: 16px;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.98);
+      white-space: nowrap;
+      z-index: 4;
+    }
+
+    .live-pill::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.34);
+    }
+
+    .primary-label {
+      position: absolute;
+      left: 38px;
+      top: 82px;
+      font-size: 17px;
+      color: rgba(255, 255, 255, 0.88);
+      white-space: nowrap;
+      z-index: 3;
+    }
+
+    .hero-emotion {
+      position: absolute;
+      left: 38px;
+      top: 118px;
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 110px;
+      line-height: 0.92;
+      font-weight: 400;
+      letter-spacing: -0.055em;
+      color: rgba(255, 255, 255, 0.98);
+      text-shadow: 0 0 22px rgba(255, 255, 255, 0.07);
+      white-space: nowrap;
+      z-index: 3;
+    }
+
+    .hero-cn {
+      position: absolute;
+      left: 38px;
+      top: 226px;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.16em;
+      color: rgba(255, 255, 255, 0.96);
+      white-space: nowrap;
+      z-index: 3;
+    }
+
+    .hero-rule {
+      position: absolute;
+      left: 38px;
+      top: 274px;
+      width: 30px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.96);
+      z-index: 3;
+    }
+
+    .hero-confidence,
+    .confidence-line {
+      position: absolute;
+      left: 38px;
+      top: 314px;
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      font-size: 20px;
+      line-height: 1;
+      letter-spacing: 0.1em;
+      color: rgba(255, 255, 255, 0.92);
+      white-space: nowrap;
+      z-index: 3;
+    }
+
+    #confidenceValue {
+      display: inline-block;
+      min-width: 82px;
+      white-space: nowrap;
+    }
+
+    .meta-wrap {
+      position: absolute;
+      left: 38px;
+      bottom: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 3;
+    }
+
+    .recognition-meta {
+      left: 38px;
+      top: 360px;
+      bottom: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      color: rgba(255, 255, 255, 0.86);
+      z-index: 3;
+    }
+
+    .meta-title {
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.84);
+      white-space: nowrap;
+    }
+
+    .recognition-meta .meta-title {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: 0.42em;
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .meta-tags {
+      display: flex;
+      align-items: center;
+      gap: 22px;
+      font-size: 13px;
+      letter-spacing: 0.26em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.92);
+      white-space: nowrap;
+    }
+
+    .recognition-meta .meta-row {
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: 0.4em;
+      color: rgba(255, 255, 255, 0.92);
+    }
+
+    .meta-tags span {
+      position: relative;
+      white-space: nowrap;
+    }
+
+    .meta-tags span + span::before {
+      content: "\2022";
+      position: absolute;
+      left: -15px;
+      top: 0;
+      color: rgba(255, 255, 255, 0.95);
+      letter-spacing: normal;
+    }
+
+    .panel-title {
+      font-size: 15px;
+      color: rgba(255, 255, 255, 0.94);
+      white-space: nowrap;
+    }
+
+    .emotion-list {
+      margin-top: 74px;
+      display: flex;
+      flex-direction: column;
+      gap: 46px;
+    }
+
+    .emotion-item {
+      width: 100%;
+    }
+
+    .emotion-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      font-size: 18px;
+      color: rgba(255, 255, 255, 0.96);
+      white-space: nowrap;
+    }
+
+    .emotion-label {
+      white-space: nowrap;
+    }
+
+    .emotion-value {
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+
+    .emotion-track {
+      position: relative;
+      margin-top: 16px;
+      width: 100%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.2);
+      overflow: visible;
+    }
+
+    .emotion-fill {
+      position: absolute;
+      left: 0;
+      top: -0.5px;
+      width: 0;
+      height: 2px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 0 5px rgba(255, 255, 255, 0.16);
+      transition: width 240ms ease-out, opacity 240ms ease-out;
+    }
+
+    .emotion-item.is-primary .emotion-fill {
+      box-shadow:
+        0 0 8px rgba(255, 255, 255, 0.42),
+        0 0 22px rgba(255, 255, 255, 0.18);
+    }
+
+    .metric-note {
+      position: absolute;
+      left: 38px;
+      bottom: 24px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.86);
+      white-space: nowrap;
+    }
+
+    .snapshot-note {
+      position: absolute;
+      left: 38px;
+      bottom: 24px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.9);
+      white-space: nowrap;
+      z-index: 3;
+    }
+
+    .chart-title {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.34em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.98);
+      white-space: nowrap;
+    }
+
+    .chart-subtitle {
+      margin-top: 12px;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.86);
+      white-space: nowrap;
+    }
+
+    .chart-subtitle::before {
+      content: "";
+      display: inline-block;
+      width: 12px;
+      height: 1px;
+      margin-right: 8px;
+      vertical-align: middle;
+      background: rgba(255, 255, 255, 0.96);
+    }
+
+    .stable-state {
+      position: absolute;
+      right: 38px;
+      top: 40px;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.92);
+      white-space: nowrap;
+    }
+
+    .stable-state::after {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-left: 12px;
+      border-radius: 50%;
+      background: #fff;
+      vertical-align: middle;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.25);
+    }
+
+    .media-box {
+      position: absolute;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 32% 20%, rgba(255, 255, 255, 0.04), transparent 32%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.004) 24%, rgba(0, 0, 0, 0.6)),
+        #030303;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      isolation: isolate;
+    }
+
+    .media-box::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 14%, transparent 72%, rgba(0, 0, 0, 0.34)),
+        repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.02) 0,
+          rgba(255, 255, 255, 0.02) 1px,
+          transparent 1px,
+          transparent 7px
+        );
+      opacity: 0.4;
+      z-index: 0;
+    }
+
+    .media-box::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(circle at center, transparent 46%, rgba(0, 0, 0, 0.36) 100%),
+        linear-gradient(180deg, rgba(0, 0, 0, 0.04), transparent 24%, transparent 76%, rgba(0, 0, 0, 0.4));
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    .media-box img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      opacity: 0;
+      visibility: hidden;
+      filter: grayscale(100%) contrast(1.06) brightness(0.82);
+      transition: opacity 180ms ease-out;
+      z-index: 1;
+    }
+
+    .media-box.is-loaded img {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .media-fade {
+      position: absolute;
+      inset: auto 0 0 0;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .portrait-image-box {
+      position: absolute;
+      right: 58px;
+      top: 86px;
+      width: 334px;
+      height: 324px;
+      overflow: hidden;
+      background: rgba(0, 0, 0, 0.35);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+    }
+
+    .portrait-image-box::before,
+    .portrait-image-box::after {
+      display: none !important;
+      content: none !important;
+      background: none !important;
+    }
+
+    .portrait-image-box .portrait-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: none;
+      opacity: 0;
+      visibility: hidden;
+      filter: grayscale(1);
+      mix-blend-mode: normal;
+      transition: opacity 260ms ease;
+    }
+
+    .portrait-image.is-loaded,
+    .portrait-image-box.is-loaded .portrait-image {
+      display: block;
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .portrait-fade {
+      display: none;
+    }
+
+    .snapshot-image-box {
+      background: rgba(0, 0, 0, 0.35);
+    }
+
+    .snapshot-box {
+      left: 24px;
+      top: 24px;
+      width: 432px;
+      height: 678px;
+      border-radius: 24px;
+    }
+
+    .snapshot-box::before,
+    .snapshot-box::after {
+      display: none !important;
+      content: none !important;
+      background: none !important;
+    }
+
+    .snapshot-box .snapshot-image {
+      display: none !important;
+    }
+
+    .snapshot-video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center center;
+      display: block;
+      opacity: 0;
+      filter: grayscale(1);
+      mix-blend-mode: normal;
+      transition: opacity 900ms ease;
+      z-index: 1;
+      background: #000;
+      pointer-events: none;
+    }
+
+    .snapshot-video.is-visible {
+      opacity: 1;
+    }
+
+    .snapshot-fade {
+      display: none;
+    }
+
+    .eeg-grid-layer {
+      position: absolute;
+      left: 38px;
+      top: 1335px;
+      width: 824px;
+      height: 180px;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .eeg-grid-line {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 0;
+      border-left: 1px dashed rgba(255, 255, 255, 0.34);
+      opacity: 0.74;
+    }
+
+    .eeg-baseline {
+      position: absolute;
+      left: 0;
+      top: 90px;
+      width: 100%;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.16);
+    }
+
+    .eeg-clip {
+      position: absolute;
+      left: 38px;
+      top: 1335px;
+      width: 824px;
+      height: 180px;
+      overflow: hidden;
+    }
+
+    #eegCanvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .eeg-axis {
+      position: absolute;
+      left: 38px;
+      top: 1558px;
+      width: 824px;
+      height: 10px;
+    }
+
+    .eeg-axis::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 5px;
+      height: 1px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .eeg-axis-dot {
+      position: absolute;
+      left: 50%;
+      top: 5px;
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.98);
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+    }
+
+    .guide-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 1000;
+      opacity: 1;
+      visibility: visible;
+      overflow: hidden;
+      pointer-events: none;
+      background: rgba(0, 0, 0, 0.96);
+      transition:
+        opacity 700ms ease,
+        visibility 0s linear 0s;
+      transform: none;
+      filter: none;
+    }
+
+    .guide-overlay.is-hidden {
+      opacity: 0;
+      visibility: hidden;
+      transition:
+        opacity 700ms ease,
+        visibility 0s linear 700ms;
+    }
+
+    .guide-welcome-visual {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .guide-welcome-image {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      user-select: none;
+      pointer-events: none;
+      -webkit-user-drag: none;
+      transform: none;
+      filter: none;
+      animation: none;
+    }
+
+    .welcome-prompt-frame-box {
+      position: absolute;
+      left: 50%;
+      top: 77.95%;
+      transform: translate(-50%, -50%);
+      width: 54.2%;
+      height: 7.35%;
+      padding: 7px 26px 10px;
+      box-sizing: border-box;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .welcome-prompt-layer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transform: none;
+      filter: none;
+      animation: none;
+      pointer-events: none;
+    }
+
+    .welcome-prompt-cn,
+    .welcome-prompt-en {
+      margin: 0;
+      position: relative;
+      display: block;
+      max-width: 100%;
+      white-space: nowrap;
+      text-align: center;
+      transform-origin: center center;
+      backface-visibility: hidden;
+      box-shadow: none;
+    }
+
+    .welcome-prompt-cn {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 27px;
+      line-height: 1;
+      font-weight: 300;
+      letter-spacing: 0.12em;
+      color: rgba(255, 255, 255, 0.92);
+      text-shadow: 0 0 6px rgba(255, 255, 255, 0.10);
+      will-change: opacity, filter;
+      animation: welcomePromptCnBreath 3.4s ease-in-out infinite;
+    }
+
+    .welcome-prompt-en {
+      margin-top: 8px;
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      font-size: 11px;
+      line-height: 1;
+      font-weight: 300;
+      letter-spacing: 0.30em;
+      color: rgba(255, 255, 255, 0.72);
+      text-shadow: 0 0 4px rgba(255, 255, 255, 0.08);
+      will-change: opacity, filter;
+      animation: welcomePromptEnGlow 3.4s ease-in-out infinite;
+    }
+
+    .welcome-prompt-cn::before,
+    .welcome-prompt-cn::after,
+    .welcome-prompt-en::before,
+    .welcome-prompt-en::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    @keyframes welcomePromptCnBreath {
+      0%,
+      100% {
+        opacity: 0.78;
+        transform: none;
+        filter: brightness(0.96);
+      }
+      50% {
+        opacity: 1;
+        transform: none;
+        filter: brightness(1.06);
+      }
+    }
+
+    @keyframes welcomePromptEnGlow {
+      0%,
+      100% {
+        opacity: 0.56;
+        filter: brightness(0.96);
+      }
+      50% {
+        opacity: 0.82;
+        filter: brightness(1.04);
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="screen">
+    <section class="ui-stage">
+      <div class="scale-root">
+        <section class="panel top-panel">
+          <div class="eyebrow field-label">FIELD / 域</div>
+          <div class="live-pill">LIVE</div>
+          <div class="primary-label eyebrow">PRIMARY EMOTION</div>
+          <h1 class="hero-emotion" id="primaryEmotionText">Neutral</h1>
+          <div class="hero-cn" id="primaryEmotionChinese">主导情绪 / 中性</div>
+          <div class="hero-rule"></div>
+          <div class="hero-confidence confidence-line">Confidence <span id="confidenceValue">0.0%</span></div>
+          <div class="meta-wrap recognition-meta">
+            <div class="meta-title">FACIAL EMOTION RECOGNITION</div>
+            <div class="meta-tags meta-row">
+              <span>EEG</span>
+              <span>EMOTION MAPPING</span>
+            </div>
+          </div>
+          <div class="media-box portrait-box portrait-image-box" id="portraitImageBox" aria-hidden="true">
+            <img id="portraitImage" class="portrait-image" alt="">
+            <div class="media-fade portrait-fade"></div>
+          </div>
+        </section>
+
+        <section class="panel left-panel">
+          <div class="panel-title">EMOTION DISTRIBUTION</div>
+          <div class="emotion-list">
+            <div class="emotion-item" data-emotion="disgust">
+              <div class="emotion-row">
+                <span class="emotion-label">Disgust</span>
+                <span class="emotion-value" id="emotionValueDisgust">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarDisgust"></div>
+              </div>
+            </div>
+
+            <div class="emotion-item" data-emotion="happy">
+              <div class="emotion-row">
+                <span class="emotion-label">Happy</span>
+                <span class="emotion-value" id="emotionValueHappy">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarHappy"></div>
+              </div>
+            </div>
+
+            <div class="emotion-item" data-emotion="surprise">
+              <div class="emotion-row">
+                <span class="emotion-label">Surprised</span>
+                <span class="emotion-value" id="emotionValueSurprised">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarSurprised"></div>
+              </div>
+            </div>
+
+            <div class="emotion-item is-primary" data-emotion="neutral">
+              <div class="emotion-row">
+                <span class="emotion-label">Neutral</span>
+                <span class="emotion-value" id="emotionValueNeutral">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarNeutral"></div>
+              </div>
+            </div>
+
+            <div class="emotion-item" data-emotion="anger">
+              <div class="emotion-row">
+                <span class="emotion-label">Anger</span>
+                <span class="emotion-value" id="emotionValueAnger">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarAnger"></div>
+              </div>
+            </div>
+
+            <div class="emotion-item" data-emotion="sadness">
+              <div class="emotion-row">
+                <span class="emotion-label">Sadness</span>
+                <span class="emotion-value" id="emotionValueSadness">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarSadness"></div>
+              </div>
+            </div>
+
+            <div class="emotion-item" data-emotion="fear">
+              <div class="emotion-row">
+                <span class="emotion-label">Fear</span>
+                <span class="emotion-value" id="emotionValueFear">0.0%</span>
+              </div>
+              <div class="emotion-track">
+                <div class="emotion-fill" id="emotionBarFear"></div>
+              </div>
+            </div>
+          </div>
+          <div class="metric-note">EMOTIONAL PROBABILITY MAP</div>
+        </section>
+
+        <section class="panel right-panel">
+          <div class="media-box snapshot-box snapshot-image-box" id="snapshotImageBox" aria-hidden="true">
+            <img id="snapshotImage" class="snapshot-image" alt="">
+            <video
+              id="snapshotVideo"
+              class="snapshot-video"
+              muted
+              playsinline
+              loop
+              preload="auto"
+            ></video>
+            <div class="media-fade snapshot-fade"></div>
+          </div>
+          <div class="snapshot-note">SNAPSHOT</div>
+        </section>
+
+        <section class="panel bottom-panel">
+          <div class="chart-title">AROUSAL VOLATILITY</div>
+          <div class="chart-subtitle">EEG Arousal Curve</div>
+          <div class="stable-state">Stable State</div>
+        </section>
+
+        <div class="eeg-grid-layer" aria-hidden="true">
+          <div class="eeg-grid-line" style="left: 14px;"></div>
+          <div class="eeg-grid-line" style="left: 95px;"></div>
+          <div class="eeg-grid-line" style="left: 174px;"></div>
+          <div class="eeg-grid-line" style="left: 254px;"></div>
+          <div class="eeg-grid-line" style="left: 334px;"></div>
+          <div class="eeg-grid-line" style="left: 414px;"></div>
+          <div class="eeg-grid-line" style="left: 494px;"></div>
+          <div class="eeg-grid-line" style="left: 574px;"></div>
+          <div class="eeg-grid-line" style="left: 654px;"></div>
+          <div class="eeg-grid-line" style="left: 734px;"></div>
+          <div class="eeg-grid-line" style="left: 804px;"></div>
+          <div class="eeg-baseline"></div>
+        </div>
+
+        <div class="eeg-clip">
+          <canvas id="eegCanvas"></canvas>
+        </div>
+
+        <div class="eeg-axis" aria-hidden="true">
+          <div class="eeg-axis-dot"></div>
+        </div>
+
+        <div class="guide-overlay" id="guideOverlay" aria-hidden="false">
+          <div class="guide-welcome-visual">
+            <img
+              class="guide-welcome-image"
+              src="assets/guide/opening_ui_reference_04_prompt_clean.png"
+              alt=""
+              draggable="false"
+            >
+            <div class="welcome-prompt-frame-box" aria-hidden="true">
+              <div class="welcome-prompt-layer">
+                <div class="welcome-prompt-cn" id="welcomePromptCn">请 前 往 识 别 区 进 行 识 别</div>
+                <div class="welcome-prompt-en" id="welcomePromptEn">PLEASE PROCEED TO THE RECOGNITION AREA</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const BASE_W = 900;
+    const BASE_H = 1600;
+
+    const EMOTION_META = {
+      happy: { english: 'Happy', chinese: '快乐' },
+      sadness: { english: 'Sadness', chinese: '悲伤' },
+      surprise: { english: 'Surprise', chinese: '惊讶' },
+      fear: { english: 'Fear', chinese: '恐惧' },
+      anger: { english: 'Anger', chinese: '愤怒' },
+      disgust: { english: 'Disgust', chinese: '厌恶' },
+      neutral: { english: 'Neutral', chinese: '中性' }
+    };
+
+    const EMOTION_KEYS = ['happy', 'sadness', 'surprise', 'fear', 'anger', 'disgust', 'neutral'];
+    const DISTRIBUTION_ORDER = ['disgust', 'happy', 'surprise', 'neutral', 'anger', 'sadness', 'fear'];
+
+    const BAR_IDS = {
+      disgust: { value: 'emotionValueDisgust', bar: 'emotionBarDisgust' },
+      happy: { value: 'emotionValueHappy', bar: 'emotionBarHappy' },
+      surprise: { value: 'emotionValueSurprised', bar: 'emotionBarSurprised' },
+      neutral: { value: 'emotionValueNeutral', bar: 'emotionBarNeutral' },
+      anger: { value: 'emotionValueAnger', bar: 'emotionBarAnger' },
+      sadness: { value: 'emotionValueSadness', bar: 'emotionBarSadness' },
+      fear: { value: 'emotionValueFear', bar: 'emotionBarFear' }
+    };
+
+    const IMAGE_DEFAULTS = {
+      portrait: '',
+      snapshot: ''
+    };
+
+    const DEFAULT_EMOTION_DATA = {
+      primaryEmotion: 'neutral',
+      confidence: 0,
+      emotions: {
+        happy: 0,
+        sadness: 0,
+        surprise: 0,
+        fear: 0,
+        anger: 0,
+        disgust: 0,
+        neutral: 0
+      },
+      eegSamples: [],
+      portraitSrc: IMAGE_DEFAULTS.portrait,
+      snapshotSrc: IMAGE_DEFAULTS.snapshot,
+      timestamp: 0
+    };
+
+    const uiState = {
+      current: null,
+      portraitSrc: IMAGE_DEFAULTS.portrait,
+      snapshotSrc: IMAGE_DEFAULTS.snapshot
+    };
+
+    const imageBindings = {};
+    const guideOverlay = document.getElementById('guideOverlay');
+
+    let fieldRecognitionStarted = false;
+    let fieldRecognitionCompleted = false;
+    let fieldProceedToCoreArea = false;
+    let lastPortraitSrc = '';
+    let portraitImageRequestToken = 0;
+    let currentSnapshotVideoSrc = '';
+    let snapshotVideoHasStarted = false;
+    let snapshotVideoLoadToken = 0;
+    let snapshotVideoCanPlayHandler = null;
+
+    const EEG_EMOTION_PROFILES = {
+      happy: {
+        label: 'positive active',
+        amplitude: 0.82,
+        frequency: 1.40,
+        speed: 1.18,
+        noise: 0.080,
+        spikeChance: 0.020,
+        smoothing: 0.58
+      },
+      sadness: {
+        label: 'low arousal slow',
+        amplitude: 0.48,
+        frequency: 1.00,
+        speed: 0.88,
+        noise: 0.040,
+        spikeChance: 0.006,
+        smoothing: 0.74
+      },
+      surprise: {
+        label: 'sudden high arousal',
+        amplitude: 0.98,
+        frequency: 1.72,
+        speed: 1.50,
+        noise: 0.105,
+        spikeChance: 0.040,
+        smoothing: 0.50
+      },
+      fear: {
+        label: 'unstable high arousal',
+        amplitude: 1.08,
+        frequency: 1.88,
+        speed: 1.62,
+        noise: 0.120,
+        spikeChance: 0.050,
+        smoothing: 0.46
+      },
+      anger: {
+        label: 'intense sharp arousal',
+        amplitude: 1.02,
+        frequency: 1.80,
+        speed: 1.54,
+        noise: 0.112,
+        spikeChance: 0.046,
+        smoothing: 0.48
+      },
+      disgust: {
+        label: 'tense controlled arousal',
+        amplitude: 0.72,
+        frequency: 1.28,
+        speed: 1.12,
+        noise: 0.072,
+        spikeChance: 0.018,
+        smoothing: 0.60
+      },
+      neutral: {
+        label: 'baseline stable',
+        amplitude: 0.38,
+        frequency: 0.92,
+        speed: 0.80,
+        noise: 0.028,
+        spikeChance: 0.003,
+        smoothing: 0.80
+      }
+    };
+
+    const EEG_PROFILE_NUMERIC_KEYS = ['amplitude', 'frequency', 'speed', 'noise', 'spikeChance', 'smoothing'];
+
+    let currentEEGProfile = { ...EEG_EMOTION_PROFILES.neutral };
+    let targetEEGProfile = { ...EEG_EMOTION_PROFILES.neutral };
+
+    const eegState = {
+      width: 824,
+      height: 180,
+      spacing: 2.55,
+      baseSpeed: 262,
+      speed: 262,
+      offset: 0,
+      time: 0,
+      prev: 0,
+      noise: 0,
+      drift: 0,
+      phaseJitter: 0,
+      spikeValue: 0,
+      points: [],
+      ctx: null,
+      lastFrame: 0,
+      useExternal: false,
+      externalSeries: [],
+      externalCursor: 0,
+      externalPrev: 0
+    };
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function blendProfile(profileA, profileB, t) {
+      const blendAmount = clamp(toNumber(t, 0), 0, 1);
+      const blended = {
+        label: profileB.label
+      };
+
+      EEG_PROFILE_NUMERIC_KEYS.forEach((key) => {
+        const fromValue = toNumber(profileA[key], 0);
+        const toValue = toNumber(profileB[key], 0);
+        blended[key] = fromValue + (toValue - fromValue) * blendAmount;
+      });
+
+      return blended;
+    }
+
+    function updateEEGProfileFromEmotion(primaryEmotion, confidence) {
+      const emotionKey = canonicalEmotionKey(primaryEmotion) || 'disgust';
+      const emotionProfile = EEG_EMOTION_PROFILES[emotionKey] || EEG_EMOTION_PROFILES.disgust;
+      const confidence01 = clamp(toNumber(confidence, 0) / 100, 0, 1);
+      const blend = 0.35 + confidence01 * 0.65;
+
+      targetEEGProfile = blendProfile(EEG_EMOTION_PROFILES.neutral, emotionProfile, blend);
+      targetEEGProfile.label = emotionProfile.label;
+    }
+
+    function updateCurrentEEGProfile() {
+      currentEEGProfile.amplitude += (targetEEGProfile.amplitude - currentEEGProfile.amplitude) * 0.025;
+      currentEEGProfile.frequency += (targetEEGProfile.frequency - currentEEGProfile.frequency) * 0.025;
+      currentEEGProfile.speed += (targetEEGProfile.speed - currentEEGProfile.speed) * 0.025;
+      currentEEGProfile.noise += (targetEEGProfile.noise - currentEEGProfile.noise) * 0.025;
+      currentEEGProfile.spikeChance += (targetEEGProfile.spikeChance - currentEEGProfile.spikeChance) * 0.025;
+      currentEEGProfile.smoothing += (targetEEGProfile.smoothing - currentEEGProfile.smoothing) * 0.025;
+      currentEEGProfile.label = targetEEGProfile.label;
+      const speedMultiplier = eegState.useExternal
+        ? 0.96 + clamp(currentEEGProfile.speed, 0.6, 1.7) * 0.04
+        : clamp(currentEEGProfile.speed, 0.6, 1.7);
+      eegState.speed = eegState.baseSpeed * speedMultiplier;
+    }
+
+    function toNumber(value, fallback) {
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : fallback;
+    }
+
+    function getTrimmedString(value) {
+      return typeof value === 'string' ? value.trim() : '';
+    }
+
+    function getFirstStringValue(source, keys, fallback = '') {
+      if (!source || typeof source !== 'object') {
+        return fallback;
+      }
+
+      const aliases = Array.isArray(keys) ? keys : [keys];
+      for (let index = 0; index < aliases.length; index += 1) {
+        const key = aliases[index];
+        if (!Object.prototype.hasOwnProperty.call(source, key)) {
+          continue;
+        }
+
+        const value = getTrimmedString(source[key]);
+        if (value) {
+          return value;
+        }
+      }
+
+      return fallback;
+    }
+
+    function getFirstNumericValue(source, keys, fallback = 0) {
+      if (!source || typeof source !== 'object') {
+        return fallback;
+      }
+
+      const aliases = Array.isArray(keys) ? keys : [keys];
+      for (let index = 0; index < aliases.length; index += 1) {
+        const key = aliases[index];
+        if (!Object.prototype.hasOwnProperty.call(source, key)) {
+          continue;
+        }
+
+        const numeric = Number(source[key]);
+        if (Number.isFinite(numeric) && numeric > 0) {
+          return numeric;
+        }
+      }
+
+      return fallback;
+    }
+
+    function getPortraitSourceFromObject(source, fallback = '') {
+      return getFirstStringValue(
+        source,
+        ['portraitSrc', 'portraitUrl', 'faceImageSrc', 'faceImageUrl', 'portraitDataUrl'],
+        fallback
+      );
+    }
+
+    function getIncomingObjectCandidates(input) {
+      if (!input || typeof input !== 'object') {
+        return [];
+      }
+
+      const candidates = [];
+      const seen = new Set();
+      function pushCandidate(candidate) {
+        if (!candidate || typeof candidate !== 'object' || seen.has(candidate)) {
+          return;
+        }
+
+        seen.add(candidate);
+        candidates.push(candidate);
+      }
+
+      pushCandidate(input);
+      pushCandidate(input.payload);
+      pushCandidate(input.result);
+      if (input.type === 'FIELD_EMOTION_UPDATE' && input.payload && typeof input.payload === 'object') {
+        pushCandidate(input.payload);
+      }
+
+      return candidates;
+    }
+
+    function getPortraitSourceFromCandidates(candidates, fallback = '') {
+      const sources = Array.isArray(candidates) ? candidates : [];
+      for (let index = 0; index < sources.length; index += 1) {
+        const portraitSrc = getPortraitSourceFromObject(sources[index], '');
+        if (portraitSrc) {
+          return portraitSrc;
+        }
+      }
+
+      return fallback;
+    }
+
+    function getIncomingNumericValue(candidates, keys, fallback = 0) {
+      const sources = Array.isArray(candidates) ? candidates : [];
+      for (let index = 0; index < sources.length; index += 1) {
+        const numeric = getFirstNumericValue(sources[index], keys, NaN);
+        if (Number.isFinite(numeric) && numeric > 0) {
+          return numeric;
+        }
+      }
+
+      return fallback;
+    }
+
+    function formatPercent(value) {
+      return clamp(toNumber(value, 0), 0, 100).toFixed(1) + '%';
+    }
+
+    function canonicalEmotionKey(value) {
+      if (typeof value !== 'string') {
+        return '';
+      }
+
+      const normalized = value.trim().toLowerCase();
+      if (normalized === 'surprised') {
+        return 'surprise';
+      }
+
+      return Object.prototype.hasOwnProperty.call(EMOTION_META, normalized) ? normalized : '';
+    }
+
+    function getSnapshotVideoByEmotion(primaryEmotion) {
+      const emotionKey = typeof primaryEmotion === 'string'
+        ? primaryEmotion.trim().toLowerCase()
+        : '';
+
+      switch (emotionKey) {
+        case 'neutral':
+          return 'videos/neutral.mp4';
+        case 'happy':
+        case 'surprise':
+        case 'surprised':
+          return 'videos/happy.mp4';
+        case 'sadness':
+        case 'sad':
+        case 'fear':
+        case 'anger':
+        case 'angry':
+          return 'videos/sad.mp4';
+        case 'disgust':
+          return currentSnapshotVideoSrc || 'videos/neutral.mp4';
+        default:
+          return currentSnapshotVideoSrc || 'videos/neutral.mp4';
+      }
+    }
+
+    function updateSnapshotVideoByEmotion(primaryEmotion, options = {}) {
+      const video = document.getElementById('snapshotVideo');
+      if (!video) {
+        return;
+      }
+
+      const forceSwitch = Boolean(options && options.force);
+
+      if (!video.dataset.snapshotErrorBound) {
+        video.addEventListener('error', () => {
+          video.classList.remove('is-visible');
+          console.debug('[SNAPSHOT] Failed to load video:', currentSnapshotVideoSrc || '(empty)');
+        });
+        video.dataset.snapshotErrorBound = 'true';
+      }
+
+      const nextSrc = getSnapshotVideoByEmotion(primaryEmotion);
+      if (!nextSrc) {
+        return;
+      }
+
+      const currentAttrSrc = getTrimmedString(video.getAttribute('src'));
+      if (!forceSwitch && currentSnapshotVideoSrc === nextSrc && (snapshotVideoHasStarted || currentAttrSrc === nextSrc)) {
+        return;
+      }
+
+      snapshotVideoLoadToken += 1;
+      const loadToken = snapshotVideoLoadToken;
+      currentSnapshotVideoSrc = nextSrc;
+
+      if (snapshotVideoCanPlayHandler) {
+        video.removeEventListener('canplay', snapshotVideoCanPlayHandler);
+        snapshotVideoCanPlayHandler = null;
+      }
+
+      video.classList.remove('is-visible');
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.controls = false;
+      video.removeAttribute('controls');
+      video.pause();
+
+      snapshotVideoCanPlayHandler = () => {
+        if (loadToken !== snapshotVideoLoadToken) {
+          return;
+        }
+
+        snapshotVideoCanPlayHandler = null;
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+          playPromise.catch(() => {});
+        }
+
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            if (loadToken === snapshotVideoLoadToken) {
+              video.classList.add('is-visible');
+            }
+          });
+        });
+
+        snapshotVideoHasStarted = true;
+      };
+
+      video.addEventListener('canplay', snapshotVideoCanPlayHandler, { once: true });
+      video.src = nextSrc;
+      video.load();
+    }
+
+    function getEmotionValue(source, key) {
+      if (!source || typeof source !== 'object') {
+        return 0;
+      }
+
+      if (key === 'surprise' && Object.prototype.hasOwnProperty.call(source, 'surprised')) {
+        return clamp(toNumber(source.surprised, 0), 0, 100);
+      }
+
+      return clamp(toNumber(source[key], 0), 0, 100);
+    }
+
+    function getDominantEmotion(emotions) {
+      let dominantKey = 'disgust';
+      let dominantValue = toNumber(emotions.disgust, 0);
+
+      EMOTION_KEYS.forEach((key) => {
+        const value = toNumber(emotions[key], 0);
+        if (value > dominantValue) {
+          dominantValue = value;
+          dominantKey = key;
+        }
+      });
+
+      return dominantKey;
+    }
+
+    function normalizeEmotionPayload(payload) {
+      const source = payload && typeof payload === 'object' ? payload : {};
+      const emotions = {};
+
+      EMOTION_KEYS.forEach((key) => {
+        emotions[key] = getEmotionValue(source.emotions, key);
+      });
+
+      let primaryEmotion = canonicalEmotionKey(source.primaryEmotion);
+      if (!primaryEmotion) {
+        primaryEmotion = getDominantEmotion(emotions);
+      }
+
+      const hasConfidence = Object.prototype.hasOwnProperty.call(source, 'confidence');
+      const confidence = hasConfidence
+        ? clamp(toNumber(source.confidence, emotions[primaryEmotion]), 0, 100)
+        : clamp(toNumber(emotions[primaryEmotion], 0), 0, 100);
+
+      const eegSamples = Array.isArray(source.eegSamples)
+        ? source.eegSamples
+          .map((item) => clamp(toNumber(item, 0), -1, 1))
+          .filter((item) => Number.isFinite(item))
+        : [];
+
+      const portraitSrc = getPortraitSourceFromObject(source, uiState.portraitSrc);
+      const portraitTimestamp = getFirstNumericValue(source, ['portraitTimestamp', 'timestamp'], 0);
+
+      const snapshotSrc = Object.prototype.hasOwnProperty.call(source, 'snapshotSrc')
+        ? (typeof source.snapshotSrc === 'string' ? source.snapshotSrc.trim() : '')
+        : uiState.snapshotSrc;
+
+      return {
+        primaryEmotion: primaryEmotion,
+        confidence: confidence,
+        emotions: emotions,
+        eegSamples: eegSamples,
+        portraitSrc: portraitSrc,
+        portraitTimestamp: portraitTimestamp,
+        snapshotSrc: snapshotSrc,
+        timestamp: toNumber(source.timestamp, 0),
+        english: EMOTION_META[primaryEmotion].english,
+        chinese: EMOTION_META[primaryEmotion].chinese
+      };
+    }
+
+    function resizeStage() {
+      const stage = document.querySelector('.ui-stage');
+      const root = document.querySelector('.scale-root');
+      const rect = stage.getBoundingClientRect();
+      const scale = Math.min(rect.width / BASE_W, rect.height / BASE_H);
+      root.style.transform = `translate(-50%, -50%) scale(${scale})`;
+    }
+
+    function updatePrimaryDistributionState(primaryEmotion) {
+      document.querySelectorAll('.emotion-item').forEach((item) => {
+        item.classList.toggle('is-primary', item.dataset.emotion === primaryEmotion);
+      });
+    }
+
+    function updateEmotionBars(emotions) {
+      DISTRIBUTION_ORDER.forEach((key) => {
+        const ids = BAR_IDS[key];
+        const value = clamp(toNumber(emotions[key], 0), 0, 100);
+        const valueElement = document.getElementById(ids.value);
+        const barElement = document.getElementById(ids.bar);
+        const track = barElement.parentElement;
+        const trackWidth = track.clientWidth || 300;
+
+        valueElement.textContent = formatPercent(value);
+
+        let widthPx = 0;
+        if (value > 0) {
+          const scaledWidth = trackWidth * (value / 100);
+          const minWidth = value < 1 ? 4 : value < 8 ? 6 : 0;
+          widthPx = Math.min(trackWidth, Math.max(scaledWidth, minWidth));
+        }
+
+        barElement.style.width = widthPx + 'px';
+        barElement.style.opacity = value > 0 ? '1' : '0';
+      });
+    }
+
+    function createImageBinding(boxId, imageId) {
+      const box = document.getElementById(boxId);
+      const img = document.getElementById(imageId);
+
+      img.addEventListener('load', () => {
+        if (img.naturalWidth > 0) {
+          box.classList.add('is-loaded');
+        }
+      });
+
+      img.addEventListener('error', () => {
+        box.classList.remove('is-loaded');
+      });
+
+      return { box, img, currentSrc: '' };
+    }
+
+    function setManagedImage(bindingName, src) {
+      const binding = imageBindings[bindingName];
+      if (!binding) {
+        return;
+      }
+
+      const nextSrc = typeof src === 'string' ? src.trim() : '';
+      if (!nextSrc) {
+        binding.currentSrc = '';
+        binding.box.classList.remove('is-loaded');
+        binding.img.removeAttribute('src');
+        return;
+      }
+
+      if (binding.currentSrc === nextSrc) {
+        if (binding.img.complete && binding.img.naturalWidth > 0) {
+          binding.box.classList.add('is-loaded');
+        } else {
+          binding.box.classList.remove('is-loaded');
+          binding.img.src = nextSrc;
+        }
+        return;
+      }
+
+      binding.currentSrc = nextSrc;
+      binding.box.classList.remove('is-loaded');
+      binding.img.src = nextSrc;
+    }
+
+    function withCacheBuster(src, timestamp) {
+      const trimmedSrc = getTrimmedString(src);
+      if (!trimmedSrc) {
+        return '';
+      }
+
+      if (trimmedSrc.startsWith('data:image')) {
+        return trimmedSrc;
+      }
+
+      const cacheTimestamp = Number.isFinite(Number(timestamp)) && Number(timestamp) > 0
+        ? Number(timestamp)
+        : Date.now();
+      return trimmedSrc + (trimmedSrc.includes('?') ? '&' : '?') + 't=' + encodeURIComponent(cacheTimestamp);
+    }
+
+    function updatePortraitImage(src, timestamp) {
+      const binding = imageBindings.portrait;
+      const box = binding ? binding.box : document.getElementById('portraitImageBox');
+      const img = binding ? binding.img : document.getElementById('portraitImage');
+      const nextSrc = getTrimmedString(src);
+
+      if (!box || !img || !nextSrc) {
+        return;
+      }
+
+      const requestToken = ++portraitImageRequestToken;
+      const shouldBustCache = nextSrc === lastPortraitSrc || !nextSrc.startsWith('data:image');
+      const finalSrc = shouldBustCache ? withCacheBuster(nextSrc, timestamp) : nextSrc;
+
+      box.classList.remove('is-loaded');
+      img.classList.remove('is-loaded');
+      img.removeAttribute('src');
+
+      img.onload = function() {
+        if (requestToken !== portraitImageRequestToken) {
+          return;
+        }
+
+        box.classList.add('is-loaded');
+        img.classList.add('is-loaded');
+      };
+
+      img.onerror = function() {
+        if (requestToken !== portraitImageRequestToken) {
+          return;
+        }
+
+        box.classList.remove('is-loaded');
+        img.classList.remove('is-loaded');
+        img.removeAttribute('src');
+      };
+
+      lastPortraitSrc = nextSrc;
+      if (binding) {
+        binding.currentSrc = nextSrc;
+      }
+      img.src = finalSrc;
+    }
+
+    function smoothExternalSeries(samples) {
+      const smoothed = [];
+      let previous = 0;
+
+      samples.forEach((sample, index) => {
+        const current = clamp(toNumber(sample, 0), -1, 1);
+        const neighbor = clamp(toNumber(samples[index + 1], current), -1, 1);
+        const averaged = index === 0 ? current : previous * 0.45 + ((current * 0.7) + (neighbor * 0.3)) * 0.55;
+        previous = averaged;
+        smoothed.push(clamp(averaged, -1, 1));
+      });
+
+      return smoothed;
+    }
+
+    function setEegDataSource(samples) {
+      const nextSeries = Array.isArray(samples) && samples.length ? smoothExternalSeries(samples) : [];
+      const nextMode = nextSeries.length > 0;
+      const modeChanged = eegState.useExternal !== nextMode;
+
+      eegState.useExternal = nextMode;
+      eegState.externalSeries = nextSeries;
+      eegState.externalCursor = 0;
+      eegState.externalPrev = eegState.points.length ? eegState.points[eegState.points.length - 1] : 0;
+
+      if (modeChanged) {
+        rebuildPoints();
+      }
+    }
+
+    function createSimulatedPoint() {
+      const profile = currentEEGProfile;
+      const frequency = profile.frequency;
+
+      eegState.time += 1.0 * profile.speed;
+      eegState.drift = eegState.drift * 0.955 + Math.sin(eegState.time * 0.022 * frequency + 0.7) * 0.006 * profile.amplitude;
+      eegState.phaseJitter = eegState.phaseJitter * 0.86 + (Math.random() - 0.5) * 0.046 * Math.max(0.45, profile.noise * 4.8);
+
+      const base =
+        Math.sin(eegState.time * 0.095 * frequency + eegState.phaseJitter * 0.35) * 0.30 +
+        Math.sin(eegState.time * 0.205 * frequency + 1.10) * 0.22 +
+        Math.sin(eegState.time * 0.365 * frequency + 0.50) * 0.11 +
+        Math.sin(eegState.time * 0.580 * frequency + 2.00) * 0.045;
+
+      const envelope = clamp(
+        0.92 +
+        Math.sin(eegState.time * 0.018 * Math.max(0.84, frequency) + 0.4) * 0.14 +
+        Math.sin(eegState.time * 0.0072 * Math.max(0.84, frequency) + 1.8) * 0.08,
+        0.72,
+        1.18
+      );
+
+      const noise = (Math.random() * 2 - 1) * profile.noise;
+
+      if (Math.random() < profile.spikeChance) {
+        eegState.spikeValue += (Math.random() * 2 - 1) * 0.42 * profile.amplitude;
+      }
+
+      eegState.spikeValue *= 0.89;
+
+      let raw = (base * profile.amplitude * envelope) + noise + eegState.spikeValue + eegState.drift;
+      raw = clamp(raw, -0.95, 0.95);
+
+      const smoothFactor = clamp(profile.smoothing, 0.45, 0.88);
+      const next = eegState.prev * smoothFactor + raw * (1 - smoothFactor);
+
+      eegState.prev = next;
+      return clamp(next, -1, 1);
+    }
+
+    function createExternalPoint() {
+      if (!eegState.externalSeries.length) {
+        return createSimulatedPoint();
+      }
+
+      const seriesLength = eegState.externalSeries.length;
+      const cursor = eegState.externalCursor;
+      const baseIndex = Math.floor(cursor) % seriesLength;
+      const nextIndex = (baseIndex + 1) % seriesLength;
+      const ratio = cursor - Math.floor(cursor);
+      const rawValue = eegState.externalSeries[baseIndex] * (1 - ratio) + eegState.externalSeries[nextIndex] * ratio;
+      const gain = 0.96 + currentEEGProfile.amplitude * 0.08;
+      const adjustedValue = clamp(rawValue * gain, -1, 1);
+      const smoothFactor = clamp(0.24 + currentEEGProfile.smoothing * 0.28, 0.34, 0.58);
+
+      eegState.externalCursor = (cursor + 1) % seriesLength;
+      eegState.externalPrev = eegState.externalPrev * smoothFactor + adjustedValue * (1 - smoothFactor);
+      return clamp(eegState.externalPrev, -1, 1);
+    }
+
+    function nextEegPoint() {
+      return eegState.useExternal ? createExternalPoint() : createSimulatedPoint();
+    }
+
+    function rebuildPoints() {
+      const count = Math.ceil(eegState.width / eegState.spacing) + 8;
+
+      eegState.points = [];
+      eegState.offset = 0;
+      eegState.time = 0;
+      eegState.prev = 0;
+      eegState.noise = 0;
+      eegState.drift = 0;
+      eegState.phaseJitter = 0;
+      eegState.spikeValue = 0;
+      eegState.externalCursor = 0;
+      eegState.externalPrev = 0;
+
+      for (let index = 0; index < count; index += 1) {
+        eegState.points.push(nextEegPoint());
+      }
+    }
+
+    function resizeCanvas() {
+      const canvas = document.getElementById('eegCanvas');
+      const box = canvas.parentElement;
+      const dpr = window.devicePixelRatio || 1;
+      const rect = box.getBoundingClientRect();
+      const layoutWidth = box.clientWidth || 824;
+      const layoutHeight = box.clientHeight || 180;
+
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+      canvas.style.width = layoutWidth + 'px';
+      canvas.style.height = layoutHeight + 'px';
+
+      const ctx = canvas.getContext('2d');
+      ctx.setTransform(canvas.width / layoutWidth, 0, 0, canvas.height / layoutHeight, 0, 0);
+
+      eegState.ctx = ctx;
+      eegState.width = layoutWidth;
+      eegState.height = layoutHeight;
+      eegState.lastFrame = 0;
+      rebuildPoints();
+    }
+
+    function pointToY(value) {
+      const center = eegState.height * 0.5;
+      const amplitude = Math.min(72, eegState.height * 0.4);
+      return clamp(center - value * amplitude, 14, eegState.height - 14);
+    }
+
+    function traceCurve(ctx) {
+      const points = eegState.points;
+      if (!points.length) {
+        return;
+      }
+
+      const startX = -eegState.offset;
+      const startY = pointToY(points[0]);
+      ctx.beginPath();
+      ctx.moveTo(startX, startY);
+
+      for (let index = 1; index < points.length - 1; index += 1) {
+        const x = index * eegState.spacing - eegState.offset;
+        const y = pointToY(points[index]);
+        const nextX = (index + 1) * eegState.spacing - eegState.offset;
+        const nextY = pointToY(points[index + 1]);
+        const midX = (x + nextX) * 0.5;
+        const midY = (y + nextY) * 0.5;
+        ctx.quadraticCurveTo(x, y, midX, midY);
+      }
+
+      const lastIndex = points.length - 1;
+      ctx.lineTo(lastIndex * eegState.spacing - eegState.offset, pointToY(points[lastIndex]));
+    }
+
+    function drawFrame() {
+      const ctx = eegState.ctx;
+      if (!ctx) {
+        return;
+      }
+
+      ctx.clearRect(0, 0, eegState.width, eegState.height);
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(0, 0, eegState.width, eegState.height);
+      ctx.clip();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      traceCurve(ctx);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.lineWidth = 4;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.22)';
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+
+      traceCurve(ctx);
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.96)';
+      ctx.lineWidth = 1.15;
+      ctx.shadowColor = 'rgba(255, 255, 255, 0.12)';
+      ctx.shadowBlur = 4;
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    function animate(timestamp) {
+      if (!eegState.lastFrame) {
+        eegState.lastFrame = timestamp;
+      }
+
+      const delta = Math.min((timestamp - eegState.lastFrame) / 1000, 0.05);
+      eegState.lastFrame = timestamp;
+      updateCurrentEEGProfile();
+      eegState.offset += eegState.speed * delta;
+
+      while (eegState.offset >= eegState.spacing) {
+        eegState.offset -= eegState.spacing;
+        eegState.points.shift();
+        eegState.points.push(nextEegPoint());
+      }
+
+      drawFrame();
+      window.requestAnimationFrame(animate);
+    }
+
+    function applyEmotionData(data) {
+      document.getElementById('primaryEmotionText').textContent = data.english;
+      document.getElementById('primaryEmotionChinese').textContent = '主导情绪 / ' + data.chinese;
+      document.getElementById('confidenceValue').textContent = formatPercent(data.confidence);
+
+      updatePrimaryDistributionState(data.primaryEmotion);
+      updateEmotionBars(data.emotions);
+
+      uiState.current = data;
+      uiState.snapshotSrc = data.snapshotSrc;
+
+      const portraitSrc = getPortraitSourceFromObject(data, '');
+      const portraitTimestamp = getFirstNumericValue(data, ['portraitTimestamp', 'timestamp'], Date.now());
+      if (portraitSrc) {
+        uiState.portraitSrc = portraitSrc;
+        updatePortraitImage(portraitSrc, portraitTimestamp);
+      }
+
+      setManagedImage('snapshot', data.snapshotSrc);
+      updateSnapshotVideoByEmotion(data.primaryEmotion);
+      updateEEGProfileFromEmotion(data.primaryEmotion, data.confidence);
+      setEegDataSource(data.eegSamples);
+    }
+
+    window.normalizeEmotionPayload = normalizeEmotionPayload;
+    window.applyEmotionData = applyEmotionData;
+    window.updateEmotionUI = function updateEmotionUI(payload) {
+      const normalized = normalizeEmotionPayload(payload);
+      applyEmotionData(normalized);
+      return normalized;
+    };
+
+    function showGuideOverlay() {
+      if (!guideOverlay) {
+        return;
+      }
+
+      guideOverlay.classList.remove('is-hidden');
+      guideOverlay.setAttribute('aria-hidden', 'false');
+    }
+
+    function hideGuideOverlay() {
+      if (!guideOverlay) {
+        return;
+      }
+
+      guideOverlay.classList.add('is-hidden');
+      guideOverlay.setAttribute('aria-hidden', 'true');
+    }
+
+    function setFieldRecognitionStarted(started) {
+      fieldRecognitionStarted = Boolean(started);
+
+      if (!fieldProceedToCoreArea) {
+        showGuideOverlay();
+      }
+    }
+
+    function setFieldRecognitionCompleted(completed) {
+      fieldRecognitionCompleted = Boolean(completed);
+
+      if (fieldRecognitionCompleted) {
+        fieldRecognitionStarted = true;
+        setFieldProceedToCoreArea(true);
+      } else {
+        setFieldProceedToCoreArea(false);
+      }
+    }
+
+    function setFieldProceedToCoreArea(ready) {
+      fieldProceedToCoreArea = Boolean(ready);
+
+      if (fieldProceedToCoreArea) {
+        fieldRecognitionStarted = true;
+        fieldRecognitionCompleted = true;
+        hideGuideOverlay();
+      } else {
+        showGuideOverlay();
+      }
+    }
+
+    function resetFieldRecognitionState() {
+      fieldRecognitionStarted = false;
+      fieldRecognitionCompleted = false;
+      setFieldProceedToCoreArea(false);
+    }
+
+    function shouldPreserveFacialEmotionResult() {
+      return fieldRecognitionStarted || fieldRecognitionCompleted || fieldProceedToCoreArea;
+    }
+
+    function hasOwnStateFlag(source, key) {
+      return Boolean(source && typeof source === 'object' && Object.prototype.hasOwnProperty.call(source, key));
+    }
+
+    function shouldHideGuideFromFacialEmotionState(data) {
+      const message = String(data?.message || data?.payload?.message || '').trim();
+      const status = String(data?.status || data?.payload?.status || '').trim().toLowerCase();
+      const stage = String(data?.stage || data?.payload?.stage || '').trim().toLowerCase();
+
+      return (
+        data?.proceedToCoreArea === true
+        || data?.payload?.proceedToCoreArea === true
+        || data?.payload?.ready === true
+        || data?.recognitionCompleted === true
+        || data?.payload?.recognitionCompleted === true
+        || data?.payload?.completed === true
+        || message.includes('请移步至核心展区观看')
+        || status === 'proceed_to_core_area'
+        || stage === 'complete'
+        || stage === 'completed'
+      );
+    }
+
+    function syncFieldRecognitionStateFromMessage(data) {
+      if (!data || typeof data !== 'object') {
+        return;
+      }
+
+      if (data.type === 'FIELD_RECOGNITION_RESET') {
+        resetFieldRecognitionState();
+        return;
+      }
+
+      const payload = data.payload && typeof data.payload === 'object' ? data.payload : null;
+      const hasStatePayload = data.type === 'FIELD_RECOGNITION_STATE'
+        || data.type === 'FIELD_RECOGNITION_COMPLETE'
+        || data.type === 'FIELD_PROCEED_TO_CORE_AREA'
+        || hasOwnStateFlag(data, 'recognitionStarted')
+        || hasOwnStateFlag(data, 'recognitionCompleted')
+        || hasOwnStateFlag(data, 'proceedToCoreArea')
+        || hasOwnStateFlag(data, 'status')
+        || hasOwnStateFlag(data, 'stage')
+        || hasOwnStateFlag(data, 'message')
+        || hasOwnStateFlag(payload, 'started')
+        || hasOwnStateFlag(payload, 'completed')
+        || hasOwnStateFlag(payload, 'recognitionStarted')
+        || hasOwnStateFlag(payload, 'recognitionCompleted')
+        || hasOwnStateFlag(payload, 'proceedToCoreArea')
+        || hasOwnStateFlag(payload, 'ready')
+        || hasOwnStateFlag(payload, 'status')
+        || hasOwnStateFlag(payload, 'stage')
+        || hasOwnStateFlag(payload, 'message');
+
+      if (!hasStatePayload) {
+        return;
+      }
+
+      const shouldProceed = shouldHideGuideFromFacialEmotionState(data);
+      const started = data.type === 'FIELD_RECOGNITION_STATE'
+        ? payload?.started === true
+        : (
+          data?.recognitionStarted === true
+          || payload?.recognitionStarted === true
+          || payload?.started === true
+          || shouldProceed
+        );
+      const completed = data.type === 'FIELD_RECOGNITION_COMPLETE'
+        ? true
+        : (
+          data?.recognitionCompleted === true
+          || payload?.recognitionCompleted === true
+          || payload?.completed === true
+          || shouldProceed
+        );
+
+      setFieldRecognitionStarted(started);
+      setFieldRecognitionCompleted(completed);
+
+      if (!completed) {
+        setFieldProceedToCoreArea(shouldProceed);
+      }
+    }
+
+    window.setFieldRecognitionStarted = setFieldRecognitionStarted;
+    window.setFieldRecognitionCompleted = setFieldRecognitionCompleted;
+    window.setFieldProceedToCoreArea = setFieldProceedToCoreArea;
+
+    /* =========================================================
+       FacialEmotion Integration Receiver
+       Receives seven emotion scores from FacialEmotion
+       ========================================================= */
+    const FIELD_EMOTION_CHANNEL_NAME = "FIELD_EMOTION_CHANNEL";
+    const FACIAL_EMOTION_ALIAS_GROUPS = {
+      happy: ['happy', 'happiness'],
+      sadness: ['sadness', 'sad'],
+      surprise: ['surprise', 'surprised'],
+      fear: ['fear', 'fearful'],
+      anger: ['anger', 'angry'],
+      disgust: ['disgust', 'disgusted'],
+      neutral: ['neutral']
+    };
+    const EMOTION_UPDATE_SOURCE_PRIORITY = {
+      default: 0,
+      json: 1,
+      broadcast: 2,
+      http: 3
+    };
+
+    let latestEmotionUpdateMeta = {
+      timestamp: -1,
+      priority: -1
+    };
+    let lastRealtimeEmotionUpdateAt = 0;
+    let lastFacialEmotionTimestamp = null;
+    let facialEmotionPollTimer = null;
+
+    const FACIAL_EMOTION_HTTP_CONFIG = {
+      enabled: true,
+      intervalMs: 300,
+      endpoint: "http://127.0.0.1:5050/api/field-emotion/latest",
+      fallbackEndpoints: [
+        "http://127.0.0.1:5000/api/field-emotion/latest",
+        "http://127.0.0.1:8000/api/field-emotion/latest",
+        "http://127.0.0.1:8080/api/field-emotion/latest"
+      ],
+      debug: false
+    };
+
+    let activeFacialEmotionEndpoint = FACIAL_EMOTION_HTTP_CONFIG.endpoint;
+
+    function getIncomingTimestamp(candidates) {
+      const sources = Array.isArray(candidates) ? candidates : [];
+      for (let index = 0; index < sources.length; index += 1) {
+        const candidate = sources[index];
+        if (candidate && typeof candidate === 'object' && Object.prototype.hasOwnProperty.call(candidate, 'timestamp')) {
+          const timestamp = Number(candidate.timestamp);
+          if (Number.isFinite(timestamp) && timestamp > 0) {
+            return timestamp;
+          }
+        }
+      }
+
+      return Date.now();
+    }
+
+    function buildEmotionMapFromLabelScores(labels, scores) {
+      if (!Array.isArray(labels) || !Array.isArray(scores)) {
+        return null;
+      }
+
+      const mapped = {};
+      const length = Math.min(labels.length, scores.length);
+      for (let index = 0; index < length; index += 1) {
+        const label = labels[index];
+        if (typeof label !== 'string') {
+          continue;
+        }
+
+        mapped[label] = scores[index];
+      }
+
+      return mapped;
+    }
+
+    function getIncomingEmotionSource(input) {
+      if (!input || typeof input !== 'object') {
+        return null;
+      }
+
+      const candidates = getIncomingObjectCandidates(input);
+
+      for (let index = 0; index < candidates.length; index += 1) {
+        const candidate = candidates[index];
+        if (candidate.emotions && typeof candidate.emotions === 'object') {
+          return {
+            emotions: candidate.emotions,
+            timestampSources: [candidate.emotions, candidate, input]
+          };
+        }
+
+        if (candidate.compound_emotion && typeof candidate.compound_emotion === 'object') {
+          return {
+            emotions: candidate.compound_emotion,
+            timestampSources: [candidate.compound_emotion, candidate, input]
+          };
+        }
+
+        const mappedFromArrays = buildEmotionMapFromLabelScores(candidate.labels, candidate.scores);
+        if (mappedFromArrays) {
+          return {
+            emotions: mappedFromArrays,
+            timestampSources: [candidate, input]
+          };
+        }
+      }
+
+      return {
+        emotions: input,
+        timestampSources: [input]
+      };
+    }
+
+    function getAliasedEmotionValue(source, key) {
+      if (!source || typeof source !== 'object') {
+        return null;
+      }
+
+      const aliases = FACIAL_EMOTION_ALIAS_GROUPS[key] || [key];
+      for (let index = 0; index < aliases.length; index += 1) {
+        const alias = aliases[index];
+        if (Object.prototype.hasOwnProperty.call(source, alias)) {
+          const numeric = Number(source[alias]);
+          if (Number.isFinite(numeric)) {
+            return numeric;
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function normalizeIncomingFacialEmotionData(input) {
+      const objectCandidates = getIncomingObjectCandidates(input);
+      const sourceGroup = getIncomingEmotionSource(input);
+      if (!sourceGroup || !sourceGroup.emotions || typeof sourceGroup.emotions !== 'object') {
+        return null;
+      }
+
+      const rawEmotionValues = {};
+      const detectedValues = [];
+
+      EMOTION_KEYS.forEach((key) => {
+        const value = getAliasedEmotionValue(sourceGroup.emotions, key);
+        rawEmotionValues[key] = value;
+        if (value !== null) {
+          detectedValues.push(value);
+        }
+      });
+
+      if (!detectedValues.length) {
+        return null;
+      }
+
+      const maxDetectedValue = Math.max.apply(null, detectedValues);
+      const shouldScaleToPercent = maxDetectedValue <= 1.5;
+      const emotions = {};
+
+      EMOTION_KEYS.forEach((key) => {
+        const rawValue = rawEmotionValues[key];
+        const baseValue = rawValue === null ? 0 : rawValue;
+        const scaledValue = shouldScaleToPercent ? baseValue * 100 : baseValue;
+        emotions[key] = clamp(toNumber(scaledValue, 0), 0, 100);
+      });
+
+      let primaryEmotion = EMOTION_KEYS[0];
+      let confidence = emotions[primaryEmotion];
+
+      EMOTION_KEYS.forEach((key) => {
+        if (emotions[key] > confidence) {
+          primaryEmotion = key;
+          confidence = emotions[key];
+        }
+      });
+
+      const timestampSources = objectCandidates.concat(sourceGroup.timestampSources || []);
+      const portraitSrc = getPortraitSourceFromCandidates(objectCandidates, '');
+      const portraitTimestamp = getIncomingNumericValue(timestampSources, ['portraitTimestamp', 'timestamp'], 0);
+      const payloadTimestamp = getIncomingNumericValue(timestampSources, ['timestamp', 'portraitTimestamp'], Date.now());
+
+      return {
+        primaryEmotion: primaryEmotion,
+        confidence: confidence,
+        emotions: emotions,
+        eegSamples: [],
+        portraitSrc: portraitSrc,
+        portraitTimestamp: portraitTimestamp,
+        snapshotSrc: IMAGE_DEFAULTS.snapshot,
+        timestamp: payloadTimestamp
+      };
+    }
+
+    function applyEmotionPayloadFromSource(payload, sourceType) {
+      if (!payload || typeof window.updateEmotionUI !== 'function') {
+        return null;
+      }
+
+      const normalized = normalizeEmotionPayload(payload);
+      const priority = Object.prototype.hasOwnProperty.call(EMOTION_UPDATE_SOURCE_PRIORITY, sourceType)
+        ? EMOTION_UPDATE_SOURCE_PRIORITY[sourceType]
+        : EMOTION_UPDATE_SOURCE_PRIORITY.default;
+      const timestamp = Number.isFinite(Number(normalized.timestamp)) && Number(normalized.timestamp) > 0
+        ? Number(normalized.timestamp)
+        : Date.now();
+
+      if (sourceType === 'json') {
+        const hasRecentRealtimeEmotion = Date.now() - lastRealtimeEmotionUpdateAt < 2000;
+        if (hasRecentRealtimeEmotion || shouldPreserveFacialEmotionResult()) {
+          return uiState.current;
+        }
+      }
+
+      const shouldApply = timestamp > latestEmotionUpdateMeta.timestamp
+        || (timestamp === latestEmotionUpdateMeta.timestamp && priority >= latestEmotionUpdateMeta.priority);
+
+      if (!shouldApply) {
+        return uiState.current;
+      }
+
+      latestEmotionUpdateMeta = {
+        timestamp: timestamp,
+        priority: priority
+      };
+
+      if (sourceType === 'http' || sourceType === 'broadcast') {
+        lastRealtimeEmotionUpdateAt = Date.now();
+      }
+
+      return window.updateEmotionUI(normalized);
+    }
+
+    window.receiveFacialEmotionData = function(input, sourceType = 'broadcast') {
+      const payload = normalizeIncomingFacialEmotionData(input);
+      if (!payload) {
+        return null;
+      }
+
+      fieldRecognitionStarted = true;
+      let appliedPayload = null;
+      if (typeof window.updateEmotionUI === "function") {
+        appliedPayload = applyEmotionPayloadFromSource(payload, sourceType);
+      }
+
+      if (!fieldProceedToCoreArea) {
+        showGuideOverlay();
+      }
+
+      return appliedPayload;
+    };
+
+    if ("BroadcastChannel" in window) {
+      const fieldEmotionChannel = new BroadcastChannel(FIELD_EMOTION_CHANNEL_NAME);
+
+      fieldEmotionChannel.onmessage = function(event) {
+        const message = event.data;
+        if (!message) return;
+
+        if (message.type === 'FIELD_RECOGNITION_STATE'
+          || message.type === 'FIELD_RECOGNITION_COMPLETE'
+          || message.type === 'FIELD_PROCEED_TO_CORE_AREA'
+          || message.type === 'FIELD_RECOGNITION_RESET') {
+          syncFieldRecognitionStateFromMessage(message);
+          return;
+        }
+
+        if (message.type === "FIELD_EMOTION_UPDATE" && message.payload) {
+          window.receiveFacialEmotionData(message.payload, 'broadcast');
+          return;
+        }
+
+        window.receiveFacialEmotionData(message, 'broadcast');
+      };
+    }
+
+    /* =========================================================
+       FacialEmotion HTTP Polling Receiver
+       Polls latest seven emotion scores from FacialEmotion backend
+       ========================================================= */
+    async function fetchJsonWithTimeout(url, timeoutMs = 250) {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const response = await fetch(url + '?t=' + Date.now(), {
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        window.clearTimeout(timer);
+        if (!response.ok) {
+          return null;
+        }
+
+        return await response.json();
+      } catch (error) {
+        window.clearTimeout(timer);
+        return null;
+      }
+    }
+
+    async function pollFacialEmotionBackend() {
+      if (!FACIAL_EMOTION_HTTP_CONFIG.enabled) return;
+
+      const endpoints = [activeFacialEmotionEndpoint]
+        .concat(FACIAL_EMOTION_HTTP_CONFIG.fallbackEndpoints)
+        .filter((endpoint, index, list) => typeof endpoint === 'string' && endpoint && list.indexOf(endpoint) === index);
+
+      for (let index = 0; index < endpoints.length; index += 1) {
+        const endpoint = endpoints[index];
+        const data = await fetchJsonWithTimeout(endpoint);
+        if (!data) {
+          continue;
+        }
+
+        activeFacialEmotionEndpoint = endpoint;
+
+        const timestamp = Number(
+          data.timestamp
+          || (data.payload && data.payload.timestamp)
+          || (data.result && data.result.timestamp)
+          || Date.now()
+        );
+
+        if (timestamp && timestamp === lastFacialEmotionTimestamp) {
+          return;
+        }
+
+        lastFacialEmotionTimestamp = timestamp || Date.now();
+        syncFieldRecognitionStateFromMessage(data);
+
+        if (data.valid !== false && data.hasFace !== false) {
+          window.receiveFacialEmotionData(data, 'http');
+        }
+        return;
+      }
+
+      if (FACIAL_EMOTION_HTTP_CONFIG.debug) {
+        console.warn('[FacialEmotion HTTP] All endpoints failed.', endpoints);
+      }
+    }
+
+    function startFacialEmotionPolling() {
+      if (facialEmotionPollTimer) return;
+      pollFacialEmotionBackend();
+      facialEmotionPollTimer = window.setInterval(pollFacialEmotionBackend, FACIAL_EMOTION_HTTP_CONFIG.intervalMs);
+    }
+
+    window.startFacialEmotionPolling = startFacialEmotionPolling;
+    window.updatePortraitImage = updatePortraitImage;
+    window.stopFacialEmotionPolling = function() {
+      if (facialEmotionPollTimer) {
+        window.clearInterval(facialEmotionPollTimer);
+        facialEmotionPollTimer = null;
+      }
+    };
+
+    async function pollEmotionStateJson() {
+      try {
+        const response = await fetch('data/emotion_state.json?ts=' + Date.now(), {
+          cache: 'no-store'
+        });
+
+        if (!response.ok) {
+          return;
+        }
+
+        const data = await response.json();
+        applyEmotionPayloadFromSource(data, 'json');
+      } catch (error) {
+        // Ignore polling failures, including file:// fetch restrictions.
+      }
+    }
+
+    function startEmotionPolling() {
+      window.setInterval(pollEmotionStateJson, 500);
+      pollEmotionStateJson();
+    }
+
+    function initializeEmotionUI() {
+      imageBindings.portrait = createImageBinding('portraitImageBox', 'portraitImage');
+      imageBindings.snapshot = createImageBinding('snapshotImageBox', 'snapshotImage');
+
+      fieldRecognitionStarted = false;
+      fieldRecognitionCompleted = false;
+      fieldProceedToCoreArea = false;
+      showGuideOverlay();
+
+      resizeStage();
+      resizeCanvas();
+      window.updateEmotionUI(DEFAULT_EMOTION_DATA);
+      window.requestAnimationFrame(animate);
+      startEmotionPolling();
+      if (FACIAL_EMOTION_HTTP_CONFIG.enabled) {
+        startFacialEmotionPolling();
+      }
+    }
+
+    window.addEventListener('resize', resizeStage);
+    window.addEventListener('resize', resizeCanvas);
+
+    initializeEmotionUI();
+  </script>
+</body>
+</html>

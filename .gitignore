@@ -1,0 +1,27 @@
+# Operating-system and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Local credentials, Python environments, caches and logs
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.log
+
+# Generated builds and run-time data
+dist/
+build/
+.pio/
+deployment/logs/
+**/deployment/logs/
+**/display/assets/runtime/
+**/display/data/emotion_state.json
+**/shared_assets/models/onnx/emotion-ferplus-12-int8.onnx
+**/shared_assets/models/onnx/emotion-ferplus-12-int8.onnx.part

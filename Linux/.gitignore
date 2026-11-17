@@ -1,0 +1,25 @@
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.log
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+dist/
+build/
+.env
+.env.*
+!.env.example
+deployment/logs/
+src/emotion_system/facial_emotion/current_best/logs/
+src/emotion_system/display/assets/runtime/
+src/emotion_system/display/data/emotion_state.json
+src/esp32_controller/esp32_firmware/.pio/
+.pio/
+
+# FERPlus is downloaded locally from its upstream source
+src/emotion_system/facial_emotion/shared_assets/models/onnx/emotion-ferplus-12-int8.onnx
+src/emotion_system/facial_emotion/shared_assets/models/onnx/emotion-ferplus-12-int8.onnx.part
